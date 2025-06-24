@@ -1,68 +1,50 @@
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+
 import { useEffect, useState } from "react";
 import CategorySelect from "./components/CategorySelect";
-import ProductCard from "./components/ProductCard";
-import TopGrid from "./components/TopGrid";
+import CategorySection from "./components/CategorySection";
 
 const API = import.meta.env.VITE_API;
 
 export default function App() {
-  // estado
-  const [categories, setCategories] = useState([]);
-  const [subcats, setSubcats] = useState([]);
-  const [selectedCat, setSelectedCat] = useState("");
-  const [items, setItems] = useState([]);
-  const [top5, setTop5] = useState([]);
+  const [sections, setSections] = useState([]); // [{category, products}]
+  const [categories, setCategories] = useState(["Todas"]);
+  const [selected, setSelected] = useState("Todas");
 
-  // categorias raíz
+  // Fetch inicial
   useEffect(() => {
-    setCategories([
-      { codigo: "MPE1051", name: "Celulares y telefonos" },
-      { codigo: "MPE1648", name: "Computación" },
-      { codigo: "MPE1747", name: "Accesorios para Vehículos" },
-    ]);
+    fetch(`${API}/mas-vendidos`)
+      .then((r) => r.json())
+      .then((data) => {
+        setSections(data);
+        setCategories(["Todas", ...data.map((sec) => sec.category)]);
+      })
+      .catch(console.error);
   }, []);
 
-  // cada vez que cambie categoría (o sub)
-  useEffect(() => {
-    if (!selectedCat) return;
-    fetch(`${API}/mas-vendidos/${selectedCat}`)
-      .then((r) => r.json())
-      .then(setItems)
-      .catch(console.error);
-  }, [selectedCat]);
+  // Helper para filtrar
+  const sectionsToShow =
+    selected === "Todas"
+      ? sections
+      : sections.filter((sec) => sec.category === selected);
 
   return (
     <main className="max-w-6xl mx-auto p-6 font-sans">
-      <h1 className="text-3xl font-bold mb-4">Tendencias Mercado Libre 🇲🇽</h1>
+      <h1 className="text-2xl font-bold mb-6">
+        Más vendidos – Mercado Libre 🇵🇪
+      </h1>
 
-      {/* TOP-5 */}
-      <section className="mb-10">
-        <h2 className="text-xl font-semibold mb-2">🔥 Top 5 más vendidos</h2>
-        {/* <TopGrid products={top5} /> */}
-      </section>
+      <CategorySelect
+        categories={categories}
+        value={selected}
+        onChange={setSelected}
+      />
 
-      {/* Filtros */}
-      <section className="mb-6">
-        <CategorySelect
-          categories={categories}
-          value={selectedCat}
-          onChange={setSelectedCat}
-        />
-      </section>
-
-      {/* Grid de la categoría */}
-      <section>
-        <h2 className="text-xl font-semibold mb-2">
-          {selectedCat
-            ? "Tendencias de la categoría"
-            : "Selecciona una categoría"}
-        </h2>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((p) => (
-            <ProductCard key={p.id} p={p} />
-          ))}
-        </div>
-      </section>
+      {/* Renderiza 1 o N secciones con slider */}
+      {sectionsToShow.map((sec) => (
+        <CategorySection key={sec.category} section={sec} />
+      ))}
     </main>
   );
 }
